@@ -1,0 +1,40 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Git
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+      - name: Get commit list since last release
+        id: get_commit_list
+        run: |
+          last_release_tag=$(git describe --tags --abbrev=0)
+          commit_list=$(git log ${last_release_tag}..develop --format='%H %s' --reverse | tr '\n' ' ')
+          echo "::set-output name=commits::${commit_list}"
+
+      - name: Create releases
+        id: create_releases
+        run: |
+          IFS=' ' read -r -a commits <<< "${{ steps.get_commit_list.outputs.commits }}"
+          for commit_info in "${commits[@]}"; do
+            commit_hash=$(echo $commit_info | cut -d ' ' -f 1)
+            commit_message=$(echo $commit_info | cut -d ' ' -f 2-)
+            client_name=$(echo $commit_message | cut -d ':' -f 1 | tr -d '[:space:]')
+            tag_name="auto-release-${client_name}-${commit_hash}"
+            git tag -a "${tag_name}" -m "${commit_message}" $commit_hash
+            git push origin "${tag_name}"
+          done
