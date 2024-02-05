@@ -1,11 +1,5 @@
 name: Manual Release
 
-on:
-  workflow_dispatch:
-  push:
-    branches:
-      - develop
-
 jobs:
   create_release:
     runs-on: ubuntu-latest
